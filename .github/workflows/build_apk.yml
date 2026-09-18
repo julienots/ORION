@@ -24,15 +24,27 @@ jobs:
           flutter-version: '3.24.0'
           channel: 'stable'
 
-      # Le repo ne contient que orion-assistant.zip (pas les fichiers extraits).
-      # On le décompresse ici, dans le job GitHub, pour retrouver un vrai
-      # projet Flutter (pubspec.yaml, lib/, android/...) avant de builder.
+      # 1) Le repo ne contient que orion-assistant.zip : on le décompresse
+      #    pour récupérer notre code (lib/, pubspec.yaml, AndroidManifest custom).
       - name: Extract project zip
         run: |
           unzip -o orion-assistant.zip -d extracted
-          # Le zip contient un dossier "orion/" à l'intérieur : on le remonte
-          # pour que le projet Flutter soit directement dans ./project
-          mv extracted/orion project
+          mv extracted/orion orion_src
+
+      # 2) On laisse Flutter générer un vrai projet Android à jour (v2 embedding,
+      #    build.gradle, MainActivity, wrapper Gradle...) au lieu d'essayer de
+      #    le maintenir à la main. C'est ce qui manquait et causait l'erreur.
+      - name: Generate fresh Flutter project scaffold
+        run: flutter create --platforms=android --org com.orion --project-name orion_assistant project
+
+      # 3) On greffe notre code par-dessus le squelette généré.
+      - name: Overlay custom code onto scaffold
+        run: |
+          rm -rf project/lib
+          cp -r orion_src/lib project/lib
+          cp orion_src/pubspec.yaml project/pubspec.yaml
+          cp orion_src/android/app/src/main/AndroidManifest.xml project/android/app/src/main/AndroidManifest.xml
+          mkdir -p project/android/app/src/main/assets
 
       - name: Install dependencies
         working-directory: project
