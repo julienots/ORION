@@ -24,10 +24,22 @@ jobs:
           flutter-version: '3.24.0'
           channel: 'stable'
 
+      # Le repo ne contient que orion-assistant.zip (pas les fichiers extraits).
+      # On le décompresse ici, dans le job GitHub, pour retrouver un vrai
+      # projet Flutter (pubspec.yaml, lib/, android/...) avant de builder.
+      - name: Extract project zip
+        run: |
+          unzip -o orion-assistant.zip -d extracted
+          # Le zip contient un dossier "orion/" à l'intérieur : on le remonte
+          # pour que le projet Flutter soit directement dans ./project
+          mv extracted/orion project
+
       - name: Install dependencies
+        working-directory: project
         run: flutter pub get
 
       - name: Build APK (release)
+        working-directory: project
         # Les clés API sont lues depuis les "Secrets" du repo GitHub
         # (Settings > Secrets and variables > Actions), jamais commit en dur.
         run: |
@@ -39,4 +51,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: orion-release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: project/build/app/outputs/flutter-apk/app-release.apk
