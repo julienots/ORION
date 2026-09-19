@@ -47,19 +47,21 @@ jobs:
         working-directory: project
         run: flutter pub get
 
-      # On patche directement le fichier Gradle du plugin téléchargé,
-      # plutôt que d'essayer de le surcharger depuis l'extérieur (ça a
-      # échoué à deux reprises à cause du timing d'évaluation Gradle).
-      - name: Patch porcupine_flutter compileSdkVersion
+      # Plusieurs plugins (porcupine_flutter, flutter_voice_processor, et
+      # potentiellement d'autres) codent en dur un compileSdkVersion trop
+      # ancien (31) dans leur propre build.gradle, incompatible avec leurs
+      # dépendances (androidx.fragment/window exigent SDK 34+). Au lieu de
+      # corriger plugin par plugin, on patche TOUS les build.gradle du
+      # pub-cache d'un coup.
+      - name: Patch outdated compileSdkVersion in all cached plugins
         run: |
-          FILE=$(find "$HOME/.pub-cache" -path "*/porcupine_flutter-*/android/build.gradle" | head -n 1)
-          echo "Fichier trouvé : $FILE"
-          if [ -n "$FILE" ]; then
-            sed -i -E 's/compileSdk(Version)?[[:space:]]*=?[[:space:]]*[0-9]+/compileSdkVersion 35/' "$FILE"
-            grep -n "compileSdk" "$FILE"
-          else
-            echo "Fichier porcupine_flutter/android/build.gradle introuvable, on continue quand même."
-          fi
+          find "$HOME/.pub-cache" -path "*/android/build.gradle" -print0 | \
+          while IFS= read -r -d '' FILE; do
+            if grep -qE 'compileSdk(Version)?[[:space:]]*=?[[:space:]]*[0-9]+' "$FILE"; then
+              sed -i -E 's/compileSdk(Version)?[[:space:]]*=?[[:space:]]*[0-9]+/compileSdkVersion 35/' "$FILE"
+              echo "Patché : $FILE"
+            fi
+          done
 
       - name: Build APK (release)
         working-directory: project
