@@ -39,21 +39,27 @@ jobs:
           cp orion_src/android/app/src/main/AndroidManifest.xml project/android/app/src/main/AndroidManifest.xml
           mkdir -p project/android/app/src/main/assets
 
-      - name: Force compileSdk 35 on all Android library modules
-        run: |
-          cat >> project/android/build.gradle.kts << 'EOF'
-          subprojects {
-              plugins.withId("com.android.library") {
-                  extensions.configure(com.android.build.gradle.LibraryExtension::class.java) {
-                      compileSdk = 35
-                  }
-              }
-          }
-          EOF
-
+      # porcupine_flutter (et parfois d'autres plugins) est compilé contre un
+      # SDK Android trop ancien en interne, ce qui casse la compatibilité avec
+      # ses propres dépendances (androidx.fragment/window exigent SDK 34+).
+      # On patche ça juste après le téléchargement (voir étape suivante).
       - name: Install dependencies
         working-directory: project
         run: flutter pub get
+
+      # On patche directement le fichier Gradle du plugin téléchargé,
+      # plutôt que d'essayer de le surcharger depuis l'extérieur (ça a
+      # échoué à deux reprises à cause du timing d'évaluation Gradle).
+      - name: Patch porcupine_flutter compileSdkVersion
+        run: |
+          FILE=$(find "$HOME/.pub-cache" -path "*/porcupine_flutter-*/android/build.gradle" | head -n 1)
+          echo "Fichier trouvé : $FILE"
+          if [ -n "$FILE" ]; then
+            sed -i -E 's/(compileSdk(Version)?[[:space:]]*=?[[:space:]]*)[0-9]+/\g<1>35/' "$FILE"
+            grep -n "compileSdk" "$FILE"
+          else
+            echo "Fichier porcupine_flutter/android/build.gradle introuvable, on continue quand même."
+          fi
 
       - name: Build APK (release)
         working-directory: project
