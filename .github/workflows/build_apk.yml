@@ -48,6 +48,26 @@ jobs:
           cp orion_src/android/app/src/main/AndroidManifest.xml project/android/app/src/main/AndroidManifest.xml
           mkdir -p project/android/app/src/main/assets
 
+      # porcupine_flutter (et parfois d'autres plugins) est compilé contre un
+      # SDK Android trop ancien en interne, ce qui casse la compatibilité avec
+      # ses propres dépendances (androidx.fragment/window exigent SDK 34+).
+      # On force tous les modules Android (librairies) à compiler contre le
+      # SDK 35, ce qui résout ce conflit sans toucher au code des plugins.
+      - name: Force compileSdk 35 on all Android library modules
+        run: |
+          cat >> project/android/build.gradle.kts << 'EOF'
+
+subprojects {
+    afterEvaluate {
+        if (project.plugins.hasPlugin("com.android.library")) {
+            extensions.findByType(com.android.build.gradle.LibraryExtension::class.java)?.apply {
+                compileSdk = 35
+            }
+        }
+    }
+}
+EOF
+
       - name: Install dependencies
         working-directory: project
         run: flutter pub get
