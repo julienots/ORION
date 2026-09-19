@@ -56,17 +56,16 @@ jobs:
       - name: Force compileSdk 35 on all Android library modules
         run: |
           cat >> project/android/build.gradle.kts << 'EOF'
-
-subprojects {
-    afterEvaluate {
-        if (project.plugins.hasPlugin("com.android.library")) {
-            extensions.findByType(com.android.build.gradle.LibraryExtension::class.java)?.apply {
-                compileSdk = 35
-            }
-        }
-    }
-}
-EOF
+          subprojects {
+              afterEvaluate {
+                  if (project.plugins.hasPlugin("com.android.library")) {
+                      extensions.findByType(com.android.build.gradle.LibraryExtension::class.java)?.apply {
+                          compileSdk = 35
+                      }
+                  }
+              }
+          }
+          EOF
 
       - name: Install dependencies
         working-directory: project
