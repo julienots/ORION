@@ -55,7 +55,7 @@ jobs:
           FILE=$(find "$HOME/.pub-cache" -path "*/porcupine_flutter-*/android/build.gradle" | head -n 1)
           echo "Fichier trouvé : $FILE"
           if [ -n "$FILE" ]; then
-            sed -i -E 's/(compileSdk(Version)?[[:space:]]*=?[[:space:]]*)[0-9]+/\g<1>35/' "$FILE"
+            sed -i -E 's/compileSdk(Version)?[[:space:]]*=?[[:space:]]*[0-9]+/compileSdkVersion 35/' "$FILE"
             grep -n "compileSdk" "$FILE"
           else
             echo "Fichier porcupine_flutter/android/build.gradle introuvable, on continue quand même."
